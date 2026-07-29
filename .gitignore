@@ -7,3 +7,9 @@ debian/*debhelper*
 debian/files
 data/dbus-1/org.freedesktop.impl.portal.desktop.cosmic.service
 data/org.freedesktop.impl.portal.desktop.cosmic.service
+
+# Packaging / release
+dist/
+.task
+.cache
+node_modules
