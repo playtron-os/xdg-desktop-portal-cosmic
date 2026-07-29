@@ -1,0 +1,66 @@
+# 1.0.0 (2026-07-29)
+
+
+### Bug Fixes
+
+* add clipboard scheme to handle cases with no uri ([f9dbe2d](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/f9dbe2d0943ed82d08c905fab0ffe5ba7c26c0df))
+* avoid handling panics with an abort ([137ef8d](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/137ef8d30471d240dc742a7db35af8966b742021))
+* better layout of window images ([ca8a4c6](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/ca8a4c691bbf3fd24481983777354ea10f88f39d))
+* better layout of window images ([c3c4279](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/c3c42791eedaffc24ce4c06b604643f516eafd0d))
+* change color-schem on theme mode change ([5f38044](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/5f38044f15656fb946c146b03f479d0931a093e0))
+* Change remaining `dbus_interface` uses to `zbus` ([a38c9c9](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/a38c9c98cceaa730da4294142508290d83916780))
+* **ci:** add missing dependency ([d26e566](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/d26e566b44c89e5527a2b345cfcecb8e23734872))
+* **data:** Expect an upper-case value in `XDG_CURRENT_DESKTOP` ([7f5cdac](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/7f5cdac67b70f385d33f742648703b0320585269)), closes [pop-os/xdg-desktop-portal-cosmic#93](https://github.com/pop-os/xdg-desktop-portal-cosmic/issues/93) [pop-os/cosmic-screenshot#3](https://github.com/pop-os/cosmic-screenshot/issues/3)
+* Don't `take()` `buffer_infos` ([05ea6e6](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/05ea6e66bd0c90d8d96c47bec7d4cbcf6005ad68))
+* **examples:** changes in ashpd API ([df831ce](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/df831ce7a48728aa9094fa1f30aed61cf1cc6ac3))
+* **file_chooser:** disable a11y feature of libcosmic to fix crash ([a7970f6](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/a7970f6d7287765eae28871c626b4fe7540da54c)), closes [#121](https://github.com/playtron-os/xdg-desktop-portal-cosmic/issues/121)
+* filtering of toplevel windows for screenshots ([0c2fd0f](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/0c2fd0f55fc64de2c28c30c5f4005275f2cc2995))
+* handling of popups within dialogs ([eaf603f](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/eaf603fcffe309e4f9737ab5fdc9aef5fa273416))
+* honor libexecdir override for binary install path ([2948dd4](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/2948dd491cfc183a57ff930ada48623038dcf94d))
+* **libcosmic:** theme subscription ([988f478](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/988f47803cb44031a7ddc77cb1c5905e8919b3a7))
+* menu & overlays ([d031585](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/d03158503d83cf49c48bc5801f1114d58159724b))
+* Only save config when rectangle drag ends ([#253](https://github.com/playtron-os/xdg-desktop-portal-cosmic/issues/253)) ([e80eb7f](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/e80eb7f11247371efd06e373d891815cd6a8acf1))
+* outdated libcosmic api in wgpu feature ([a8c5d7b](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/a8c5d7be6fc91b8b46dc0864cadb087406ff6ce6))
+* rectangle selection with scaled outputs ([b667e4a](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/b667e4a005ec60d94b8faa3c2f3a869653e3f9f0))
+* render order and panic ([5fcabf5](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/5fcabf5f371ceb6b92d771db47e15ce75ccad02b))
+* return on None instead of unwrap and log errors ([cd084bf](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/cd084bf5043a399b65ab736550888fe08f28dfe3))
+* rotated output screenshot ([adfa839](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/adfa839b584186c95ee2f2320072a5ab01c5552b))
+* save screenshot to clipboard ([be483db](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/be483db29d56a40580b8dfbf8c2ad50740b01ba1))
+* **scaling:** update libcosmic ([2788bd3](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/2788bd3f87713ec5b1ae0f999f42dc44e78f0202))
+* **screencast:** add desktop entry icons to toplevel buttons ([34fe50f](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/34fe50fbeae4eb30be846d9b330411161e957b10))
+* **screenshot:** Don't save empty selection ([05c37cd](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/05c37cd94294cf5cda812d5bc27ab83e4a46b72d)), closes [pop-os/cosmic-screenshot#54](https://github.com/pop-os/cosmic-screenshot/issues/54)
+* **screenshot:** Localized time names ([e76630c](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/e76630ce22a4d0649f3d3cd16ad150f8cea530f5)), closes [pop-os/cosmic-screenshot#67](https://github.com/pop-os/cosmic-screenshot/issues/67) [pop-os/cosmic-screenshot#74](https://github.com/pop-os/cosmic-screenshot/issues/74) [pop-os/cosmic-screenshot#40](https://github.com/pop-os/cosmic-screenshot/issues/40)
+* set M_MMAP_THRESHOLD to prevent glibc memory fragmentation ([30ce508](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/30ce50857933e58765607f37a8bf93be4742a41a))
+* sort the outputs in screencast dialog based on their position ([4f0e7ff](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/4f0e7ffebcf1a4f7ed3d9b285901dbb28d5ea230))
+* update accent color when light/dark mode switched ([0917743](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/091774311845202e08ac49d2589043464798cc4f))
+* update libcosmic ([463d1a7](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/463d1a79dabd4ba36675b7136dc89b18f8ab3444)), closes [#219](https://github.com/playtron-os/xdg-desktop-portal-cosmic/issues/219)
+* Use correct `modifier` ([3760fff](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/3760fffe59cafa00c47fd833ce9c7f433c39d644))
+* use fallback background from cosmic-wallpapers rather than pop-wallpapers ([#267](https://github.com/playtron-os/xdg-desktop-portal-cosmic/issues/267)) ([e11c0f5](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/e11c0f524e2d9307dfd77200f6496246e576d71f))
+* use Length::FillPortion for the window images ([1be048d](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/1be048d5ba56abf15ec51b388abc5f3b9bd28570))
+* use struct for accent-color Color and don't wrap  in another value ([babfc15](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/babfc150e6248eca978524e8d3aea9fc9fd8a236))
+* wrap windows in a scrollable after 8 toplevels, and add max sizes ([e7c92a7](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/e7c92a7316ad5c6e0ccfa08adaae118ee8f2738f))
+
+
+### Features
+
+* add ctrl+c, ctrl+s functionality to cosmic-screenshot ([#224](https://github.com/playtron-os/xdg-desktop-portal-cosmic/issues/224)) ([0aebfc9](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/0aebfc9c3b592d6edb82fe03cd5cb0f44db63644))
+* add rpm packaging ([fc4f407](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/fc4f4075e50c456d9a2bae26417c2971c99fbd38))
+* appearance settings ([de59bb3](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/de59bb3151a0bbc87f5352f42e6420413eede4c5))
+* cancel screenshot when Escape is pressed ([b45735e](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/b45735ede47ae150a8524f0c7ae6b30b9b459426))
+* copy screenshot to clipboard ([1024aaf](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/1024aaf3bf39f5b2facf1cb703cd31614642db82))
+* implement design ([026eef1](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/026eef1348a31625b39e49a440e7cd747983a980))
+* implement enter to capture ([5c5ffde](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/5c5ffde348f7a1e4a07f3b911b5414b4bf9bcf5b))
+* lay out screencast outputs by display arrangement ([a9f71d3](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/a9f71d39223bdac1a88686ebc0ad0ebfda15a975))
+* portals configuration file; use `gnome-keyring` for Secrets portal ([7917b4c](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/7917b4ccb13cda0156e70b57db14906465556da2))
+* Restore last used screenshot settings ([fe4e161](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/fe4e161abb65d07be41d9042e5c2d5a04c6b19f9)), closes [pop-os/cosmic-screenshot#29](https://github.com/pop-os/cosmic-screenshot/issues/29)
+* **screenshot:** remember last selected screenshot region ([7423bda](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/7423bda75aeb0fb2186a7ab4fc57da554559ccf7))
+* **screenshot:** Support XDG_SCREENSHOTS_DIR and Screenshots subfolder ([17be8c5](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/17be8c576fdb8a73962f5b96e860804de5a49f57))
+* **screenshot:** Support XDG_SCREENSHOTS_DIR and Screenshots subfolder ([#255](https://github.com/playtron-os/xdg-desktop-portal-cosmic/issues/255)) ([6543777](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/6543777f6af906e56d291825219926022eebee3a))
+* update rectangle selection tool design and decrease visual size of bottom toolbar ([6b5e941](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/6b5e9416cc86d0e616063ca78ac09aa9b4abefbc))
+* window selection and some cleanup ([a01e4f7](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/a01e4f7aade85db101ae1bea907cbb6f4da0c2ab))
+
+
+### Performance Improvements
+
+* **cargo:** reduce binary size by another 5MB with panic="abort" ([c4bb21f](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/c4bb21fa92b72e9b14440a4dc0649adbb79ea6bb))
+* optimized cosmic-freedesktop-icons ([93997f8](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/93997f83a5b4178ce3d6bf8aec2f8114be10d381))
