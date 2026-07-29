@@ -71,7 +71,15 @@ impl From<u8> for DragState {
 }
 
 const EDGE_GRAB_THICKNESS: f32 = 8.0;
+/// Pointer grab target for the corner handles.
 const CORNER_DIAMETER: f32 = 16.0;
+/// Drawn size of the corner handles, kept smaller than the grab target so the
+/// selection reads as light without shrinking the resize hit area.
+const CORNER_HANDLE_DIAMETER: f32 = 8.0;
+/// Selection outline: a thin dashed stroke rather than a heavy solid border.
+const SELECTION_BORDER_WIDTH: f32 = 2.0;
+const SELECTION_DASH_LENGTH: f32 = 6.0;
+const SELECTION_DASH_GAP: f32 = 4.0;
 
 pub struct RectangleSelection<Msg> {
     output_rect: Rect,
@@ -486,9 +494,9 @@ impl<Msg: 'static + Clone> Widget<Msg, cosmic::Theme, cosmic::Renderer>
         );
         let outer_top_left = Point::new(self.output_rect.left as f32, self.output_rect.top as f32);
         let outer_rect = Rectangle::new(outer_top_left, outer_size);
-        let Some(clipped_inner_rect) = inner_rect.intersection(&outer_rect) else {
+        if inner_rect.intersection(&outer_rect).is_none() {
             return;
-        };
+        }
         #[cfg(feature = "wgpu")]
         {
             use cosmic::iced::advanced::graphics::Mesh;
@@ -544,24 +552,43 @@ impl<Msg: 'static + Clone> Widget<Msg, cosmic::Theme, cosmic::Renderer>
             })
         }
 
-        let translated_clipped_inner_rect = Rectangle::new(
-            Point::new(
-                clipped_inner_rect.x - outer_rect.x,
-                clipped_inner_rect.y - outer_rect.y,
-            ),
-            clipped_inner_rect.size(),
-        );
-        let quad = Quad {
-            bounds: translated_clipped_inner_rect,
-            border: Border {
-                radius: 0.0.into(),
-                width: 4.0,
-                color: accent,
-            },
-            shadow: Shadow::default(),
-            snap: true,
+        // Dashed outline: `fill_quad` only renders solid borders, so each dash is
+        // its own quad. Dashes follow the unclipped selection and the surrounding
+        // layer clips whatever falls outside this output, so a selection spanning
+        // two outputs draws no stroke along the seam.
+        let selection = self.translated_inner_rect();
+        let mut dash = |bounds: Rectangle| {
+            renderer.fill_quad(
+                Quad {
+                    bounds,
+                    border: Border::default(),
+                    shadow: Shadow::default(),
+                    snap: true,
+                },
+                accent,
+            );
         };
-        renderer.fill_quad(quad, Color::TRANSPARENT);
+        let stride = SELECTION_DASH_LENGTH + SELECTION_DASH_GAP;
+        let inset = (selection.height - SELECTION_BORDER_WIDTH).max(0.0);
+        let mut x = selection.x;
+        let end_x = selection.x + selection.width;
+        while x < end_x {
+            let len = SELECTION_DASH_LENGTH.min(end_x - x);
+            let size = Size::new(len, SELECTION_BORDER_WIDTH);
+            dash(Rectangle::new(Point::new(x, selection.y), size));
+            dash(Rectangle::new(Point::new(x, selection.y + inset), size));
+            x += stride;
+        }
+        let inset = (selection.width - SELECTION_BORDER_WIDTH).max(0.0);
+        let mut y = selection.y;
+        let end_y = selection.y + selection.height;
+        while y < end_y {
+            let len = SELECTION_DASH_LENGTH.min(end_y - y);
+            let size = Size::new(SELECTION_BORDER_WIDTH, len);
+            dash(Rectangle::new(Point::new(selection.x, y), size));
+            dash(Rectangle::new(Point::new(selection.x + inset, y), size));
+            y += stride;
+        }
 
         // draw handles as quads with radius_s
         let radius_s = cosmic.radius_s();
@@ -581,10 +608,10 @@ impl<Msg: 'static + Clone> Widget<Msg, cosmic::Theme, cosmic::Renderer>
             let translated_y = y - outer_rect.y;
             let bounds = Rectangle::new(
                 Point::new(
-                    translated_x - CORNER_DIAMETER / 2.0,
-                    translated_y - CORNER_DIAMETER / 2.0,
+                    translated_x - CORNER_HANDLE_DIAMETER / 2.0,
+                    translated_y - CORNER_HANDLE_DIAMETER / 2.0,
                 ),
-                Size::new(CORNER_DIAMETER, CORNER_DIAMETER),
+                Size::new(CORNER_HANDLE_DIAMETER, CORNER_HANDLE_DIAMETER),
             );
             let quad = Quad {
                 bounds,

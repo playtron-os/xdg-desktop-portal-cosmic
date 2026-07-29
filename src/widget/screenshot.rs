@@ -24,6 +24,15 @@ use crate::screenshot::{Choice, Rect, ScreenshotImage};
 use super::output_selection::OutputSelection;
 use super::rectangle_selection::{DragState, RectangleSelection};
 
+/// Icon size for the tool-panel controls.
+const MENU_ICON_SIZE: u16 = 24;
+/// Inset that `Rule::LightDivider` trims off each end of a divider
+/// (`FillMode::Padded(8)`), so the drawn line is this much shorter per side.
+const MENU_DIVIDER_INSET: f32 = 8.0;
+/// Height of the separators between tool-panel control groups. Sized so the
+/// visible line matches the icon-button height rather than shrinking to a dot.
+const MENU_DIVIDER_HEIGHT: f32 = MENU_ICON_SIZE as f32 + 2.0 * MENU_DIVIDER_INSET;
+
 pub struct ScreenshotSelection<'a, Msg> {
     id: cosmic::widget::Id,
     pub choice: Choice,
@@ -81,6 +90,7 @@ where
         let space_s = spacing.space_s;
         let space_xs = spacing.space_xs;
         let space_xxs = spacing.space_xxs;
+        let space_xxxs = spacing.space_xxxs;
 
         let output_rect = Rect {
             left: output.logical_pos.0,
@@ -202,6 +212,7 @@ where
         let active_icon = cosmic::theme::Svg::Custom(Rc::new(|t| svg::Style {
             color: Some(t.cosmic().accent_color().into()),
         }));
+        let icon_size = MENU_ICON_SIZE;
         Self {
             id: cosmic::widget::Id::unique(),
             choices: Vec::new(),
@@ -214,10 +225,10 @@ where
                     row![
                         button::custom(
                             icon::Icon::from(
-                                icon::from_name("screenshot-selection-symbolic").size(64)
+                                icon::from_name("screenshot-selection-symbolic").size(icon_size)
                             )
-                            .width(Length::Fixed(40.0))
-                            .height(Length::Fixed(40.0))
+                            .width(Length::Fixed(icon_size as f32))
+                            .height(Length::Fixed(icon_size as f32))
                             .class(
                                 if matches!(choice, Choice::Rectangle(..)) {
                                     active_icon.clone()
@@ -232,29 +243,29 @@ where
                             Rect::default(),
                             DragState::None
                         )))
-                        .padding(space_xs),
+                        .padding(space_xxs),
                         button::custom(
                             icon::Icon::from(
-                                icon::from_name("screenshot-window-symbolic").size(64)
+                                icon::from_name("screenshot-window-symbolic").size(icon_size)
                             )
                             .class(if matches!(choice, Choice::Window(..)) {
                                 active_icon.clone()
                             } else {
                                 cosmic::theme::Svg::default()
                             })
-                            .width(Length::Fixed(40.0))
-                            .height(Length::Fixed(40.0))
+                            .width(Length::Fixed(icon_size as f32))
+                            .height(Length::Fixed(icon_size as f32))
                         )
                         .selected(matches!(choice, Choice::Window(..)))
                         .class(cosmic::theme::Button::Icon)
                         .on_press(on_choice_change(Choice::Window(output.name.clone(), None)))
-                        .padding(space_xs),
+                        .padding(space_xxs),
                         button::custom(
                             icon::Icon::from(
-                                icon::from_name("screenshot-screen-symbolic").size(64)
+                                icon::from_name("screenshot-screen-symbolic").size(icon_size)
                             )
-                            .width(Length::Fixed(40.0))
-                            .height(Length::Fixed(40.0))
+                            .width(Length::Fixed(icon_size as f32))
+                            .height(Length::Fixed(icon_size as f32))
                             .class(
                                 if matches!(choice, Choice::Output(..)) {
                                     active_icon.clone()
@@ -266,38 +277,39 @@ where
                         .selected(matches!(choice, Choice::Output(..)))
                         .class(cosmic::theme::Button::Icon)
                         .on_press(on_choice_change(Choice::Output(output.name.clone())))
-                        .padding(space_xs)
+                        .padding(space_xxs)
                     ]
-                    .spacing(space_s)
+                    .spacing(space_xxxs)
                     .align_y(Alignment::Center),
-                    divider::vertical::light().height(Length::Fixed(64.0)),
-                    button::custom(text(fl!("capture"))).on_press_maybe(
-                        if let Choice::Rectangle(r, ..) = choice {
+                    divider::vertical::light().height(Length::Fixed(MENU_DIVIDER_HEIGHT)),
+                    button::custom(text(fl!("capture")))
+                        .padding([space_xxxs, space_s])
+                        .on_press_maybe(if let Choice::Rectangle(r, ..) = choice {
                             // Disable button on empty selection
                             r.dimensions().is_some().then_some(on_capture)
                         } else {
                             Some(on_capture)
-                        }
-                    ),
-                    divider::vertical::light().height(Length::Fixed(64.0)),
+                        }),
+                    divider::vertical::light().height(Length::Fixed(MENU_DIVIDER_HEIGHT)),
                     Element::from(dropdown(
                         save_locations.as_slice(),
                         Some(selected_save_location),
                         |i| i
                     ))
                     .map(dropdown_selected),
-                    divider::vertical::light().height(Length::Fixed(64.0)),
+                    divider::vertical::light().height(Length::Fixed(MENU_DIVIDER_HEIGHT)),
                     button::custom(
-                        icon::Icon::from(icon::from_name("window-close-symbolic").size(63))
-                            .width(Length::Fixed(40.0))
-                            .height(Length::Fixed(40.0))
+                        icon::Icon::from(icon::from_name("window-close-symbolic").size(icon_size))
+                            .width(Length::Fixed(icon_size as f32))
+                            .height(Length::Fixed(icon_size as f32))
                     )
                     .class(cosmic::theme::Button::Icon)
+                    .padding(space_xxs)
                     .on_press(on_cancel),
                 ]
                 .align_y(Alignment::Center)
-                .spacing(space_s)
-                .padding([space_xxs, space_s, space_xxs, space_s]),
+                .spacing(space_xs)
+                .padding([space_xxxs, space_xs, space_xxxs, space_xs]),
             )
             .class(cosmic::theme::Container::Custom(Box::new(|theme| {
                 let cosmic = theme.cosmic();
