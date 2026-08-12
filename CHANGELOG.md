@@ -1,3 +1,16 @@
+# [1.1.0](https://github.com/playtron-os/xdg-desktop-portal-cosmic/compare/v1.0.0...v1.1.0) (2026-08-12)
+
+
+### Bug Fixes
+
+* **screenshot:** dim the backdrop on every renderer ([18eb128](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/18eb12845221ee95824231083f50d63b1651a25d))
+* update deps to fix theme issues ([8964b3d](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/8964b3d7f02dc63c0ef6a6c3002c56afd54af815))
+
+
+### Features
+
+* **icons:** draw the portal UI with Lucide icons ([190a024](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/190a02413c7d48c313d7ba4260133e9555470633))
+
 # 1.0.0 (2026-07-29)
 
 

@@ -10,7 +10,7 @@
 
 Name:           %{app_name}
 Epoch:          1
-Version: 1.0.0
+Version: 1.1.0
 Release:        1%{?dist}
 Summary:        XDG Desktop Portal backend for COSMIC (Playtron fork)
 
