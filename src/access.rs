@@ -7,7 +7,7 @@ use cosmic::iced::runtime::platform_specific::wayland::layer_surface::{
     IcedOutput, SctkLayerSurfaceSettings,
 };
 use cosmic::iced::widget::{column, row};
-use cosmic::iced::{Alignment, window};
+use cosmic::iced::{Alignment, Length, window};
 use cosmic::widget::autosize::autosize;
 use cosmic::widget::{self, Column, Id, button, dropdown, icon, text};
 use std::collections::HashMap;
@@ -17,7 +17,19 @@ use zbus::zvariant;
 use crate::app::CosmicPortal;
 use crate::wayland::WaylandHelper;
 use crate::widget::keyboard_wrapper::KeyboardWrapper;
+use crate::widget::lucide;
 use crate::{PortalResponse, fl, subscription};
+
+/// Shown when the requesting app supplies no icon name, or names one the icon
+/// theme does not ship. Vendored Lucide glyph rather than an icon-theme name,
+/// to match the rest of the shell.
+const UNKNOWN_APP_ICON: &[u8] = include_bytes!("../res/icons/lucide/circle-help.svg");
+
+/// The dialog's hero icon slot. An app's own icon fills it, but the Lucide
+/// fallback draws at its native size centered inside instead: a 24-viewBox
+/// glyph scaled to 64 would render its 1.75 stroke at ~4.7px.
+const HERO_ICON_SLOT: u16 = 64;
+const LUCIDE_ICON_SIZE: u16 = 24;
 
 //(ID returned with the response, choices (ID, label), label, initial selection or "" meaning the portal should choose)
 type AccessDialogChoice = (String, String, Vec<(String, String)>, String);
@@ -200,15 +212,25 @@ pub(crate) fn view(portal: &CosmicPortal) -> cosmic::Element<'_, Msg> {
         .spacing(spacing.space_xxs as f32) // space_l
         .align_x(Alignment::Center);
 
-    let icon = icon::Icon::from(
-        icon::from_name(
-            args.options
-                .icon
-                .as_ref()
-                .map_or("image-missing", |name| name.as_str()),
-        )
-        .size(64),
-    );
+    // The requesting app's own icon name stays theme-resolved; only the fallback
+    // is ours to draw, and it says "unidentified app" rather than the
+    // broken-image placeholder `image-missing` implies. `from_name` renders a
+    // silent blank when the theme ships no such icon, so resolve `path()` first
+    // and fall through to the vendored glyph on a miss.
+    let named = args
+        .options
+        .icon
+        .as_deref()
+        .filter(|name| !name.is_empty())
+        .map(|name| icon::from_name(name).size(HERO_ICON_SLOT))
+        .filter(|named| named.clone().path().is_some());
+
+    let icon: cosmic::Element<'_, Msg> = match named {
+        Some(named) => icon::Icon::from(named).into(),
+        None => widget::container(lucide::icon(UNKNOWN_APP_ICON, LUCIDE_ICON_SIZE))
+            .center(Length::Fixed(f32::from(HERO_ICON_SLOT)))
+            .into(),
+    };
 
     let control = column![text(args.body.as_str()), options].spacing(spacing.space_m as f32);
 

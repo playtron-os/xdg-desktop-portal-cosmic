@@ -12,7 +12,6 @@ libexecdir := clean(prefix / 'libexec')
 # Installation target paths
 data-dir := base-dir / 'share'
 lib-dir := base-dir / 'lib'
-icons-dir := data-dir / 'icons' / 'hicolor'
 
 cargo-target-dir := env('CARGO_TARGET_DIR', 'target')
 
@@ -52,11 +51,6 @@ install:
         | install -Dm0644 /dev/stdin {{ lib-dir }}/systemd/user/{{ appid }}.service
     install -Dm0644 data/cosmic.portal {{ data-dir }}/xdg-desktop-portal/portals/cosmic.portal
     install -Dm0644 data/cosmic-portals.conf {{ data-dir }}/xdg-desktop-portal/cosmic-portals.conf
-    find 'data'/'icons' -type f -exec echo {} \; \
-        | rev \
-        | cut -d'/' -f-3 \
-        | rev \
-        | xargs -d '\n' -I {} install -Dm0644 'data'/'icons'/{} {{ icons-dir }}/{}
 
 # Vendors Cargo dependencies into a tarball
 vendor:

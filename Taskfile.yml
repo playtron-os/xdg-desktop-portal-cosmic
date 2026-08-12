@@ -86,11 +86,6 @@ tasks:
       - install -Dm0644 "data/cosmic.portal" "{{.STAGE}}/usr/share/xdg-desktop-portal/portals/cosmic.portal"
       - install -Dm0644 "data/cosmic-portals.conf" "{{.STAGE}}/usr/share/xdg-desktop-portal/cosmic-portals.conf"
       - install -Dm0644 "LICENSE" "{{.STAGE}}/usr/share/licenses/{{.NAME}}/LICENSE"
-      # Icons keep their <size>/<category>/<file> path under the hicolor theme.
-      - |
-        find data/icons -type f -name '*.svg' | while read -r icon; do
-          install -Dm0644 "$icon" "{{.STAGE}}/usr/share/icons/hicolor/${icon#data/icons/}"
-        done
       - mkdir -p dist
 
   dist:archive:

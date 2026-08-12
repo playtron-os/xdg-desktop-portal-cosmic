@@ -2,12 +2,13 @@ use crate::app::CosmicPortal;
 use crate::fl;
 use crate::wayland::{CaptureSource, WaylandHelper};
 use crate::widget::keyboard_wrapper::KeyboardWrapper;
+use crate::widget::lucide;
 use ashpd::desktop::screencast::SourceType;
 use ashpd::enumflags2::BitFlags;
-use cosmic::desktop::IconSourceExt;
 use cosmic::iced::keyboard::Key;
 use cosmic::iced::keyboard::key::Named;
 use cosmic::iced::{self, window};
+use cosmic::widget::icon;
 use fde::IconSource;
 
 use cosmic::desktop::fde;
@@ -31,6 +32,17 @@ use zbus::zvariant;
 pub static SCREENCAST_ID: LazyLock<window::Id> = LazyLock::new(window::Id::unique);
 pub static SCREENCAST_WIDGET_ID: LazyLock<widget::Id> =
     LazyLock::new(|| widget::Id::new("screencast".to_string()));
+
+/// Drawn for a toplevel that advertises no icon, or names one the icon theme
+/// does not ship. Same glyph the Access dialog falls back to, in place of the
+/// blank slot `as_cosmic_icon`'s `application-default` chain leaves behind.
+const UNKNOWN_APP_ICON: &[u8] = include_bytes!("../res/icons/lucide/circle-help.svg");
+/// Marks the selected toplevel; was a literal `✓`, drawn from whatever font
+/// happened to cover U+2713.
+const SELECTED_ICON: &[u8] = include_bytes!("../res/icons/lucide/check.svg");
+
+/// Size of both glyphs in a toplevel row.
+const TOPLEVEL_ICON_SIZE: u16 = 24;
 
 pub async fn hide_screencast_prompt(
     subscription_tx: &mpsc::Sender<crate::subscription::Event>,
@@ -365,12 +377,39 @@ fn output_thumb_button<'a>(
         .into()
 }
 
-fn toplevel_button(
-    label: &str,
+/// The toplevel's own icon stays theme-resolved — it is that app's branding —
+/// but the misses are ours: `from_name` renders a silent blank when the theme
+/// ships no such icon, and `as_cosmic_icon` would otherwise reach for the
+/// theme's `application-default`. Resolve `path()` and draw Lucide on a miss.
+fn toplevel_icon(name: Option<&str>) -> icon::Icon {
+    let resolved = match name
+        .filter(|name| !name.is_empty())
+        .map(IconSource::from_unknown)
+    {
+        // `from_unknown` only yields `Path` for a file it already saw exist.
+        Some(IconSource::Path(path)) => Some(icon::from_path(path)),
+        Some(IconSource::Name(name)) => {
+            // Look the art up at 128 as libcosmic's `as_cosmic_icon` did: the size
+            // picks the theme directory, so asking at the drawn size would select
+            // 24px raster art and upscale it on a HiDPI output.
+            let named = icon::from_name(name.as_str()).prefer_svg(true).size(128);
+            named.clone().path().map(|_| named.handle())
+        }
+        None => None,
+    };
+
+    match resolved {
+        Some(handle) => icon::icon(handle).size(TOPLEVEL_ICON_SIZE),
+        None => lucide::icon(UNKNOWN_APP_ICON, TOPLEVEL_ICON_SIZE),
+    }
+}
+
+fn toplevel_button<'a>(
+    label: &'a str,
     is_selected: bool,
-    icon: IconSource,
+    icon_name: Option<&str>,
     msg: Msg,
-) -> cosmic::Element<'_, Msg> {
+) -> cosmic::Element<'a, Msg> {
     let text = widget::text(label).class(theme::style::Text::Custom(|theme| {
         let container = theme.current_container();
         iced::core::widget::text::Style {
@@ -387,11 +426,10 @@ fn toplevel_button(
         .selected(is_selected)
         .on_press(msg);
     let mut children = Vec::new();
-    children.push(icon.as_cosmic_icon().icon().size(24).into());
+    children.push(toplevel_icon(icon_name).into());
     children.push(button.into());
-    // TODO
     if is_selected {
-        children.push(widget::text("✓").into());
+        children.push(lucide::icon(SELECTED_ICON, TOPLEVEL_ICON_SIZE).into());
     }
     widget::row::with_children(children).spacing(12).into()
 }
@@ -475,7 +513,6 @@ pub(crate) fn view(portal: &CosmicPortal) -> cosmic::Element<'_, Msg> {
         Tab::Windows => {
             let mut list = widget::ListColumn::new();
             for (toplevel_info, icon) in &args.toplevels {
-                let icon = IconSource::from_unknown(icon.as_deref().unwrap_or_default());
                 let label = &toplevel_info.title;
                 let is_selected = args
                     .capture_sources
@@ -484,7 +521,7 @@ pub(crate) fn view(portal: &CosmicPortal) -> cosmic::Element<'_, Msg> {
                 list = list.add(toplevel_button(
                     label,
                     is_selected,
-                    icon,
+                    icon.as_deref(),
                     Msg::SelectToplevel(toplevel_info.foreign_toplevel.clone()),
                 ));
             }

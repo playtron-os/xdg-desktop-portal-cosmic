@@ -55,11 +55,6 @@ install -Dm0644 "usr/share/xdg-desktop-portal/cosmic-portals.conf" "%{buildroot}
 
 install -Dm0644 "usr/share/licenses/%{name}/LICENSE" "%{buildroot}%{_datadir}/licenses/%{name}/LICENSE"
 
-# Screenshot tool-panel icons
-for icon in usr/share/icons/hicolor/scalable/actions/*.svg; do
-    install -Dm0644 "${icon}" "%{buildroot}%{_datadir}/icons/hicolor/scalable/actions/$(basename "${icon}")"
-done
-
 %files
 %license %{_datadir}/licenses/%{name}/LICENSE
 %{_libexecdir}/%{name}
@@ -67,7 +62,6 @@ done
 %{_userunitdir}/%{appid}.service
 %{_datadir}/xdg-desktop-portal/portals/cosmic.portal
 %{_datadir}/xdg-desktop-portal/cosmic-portals.conf
-%{_datadir}/icons/hicolor/scalable/actions/screenshot-*-symbolic.svg
 
 %changelog
 * Wed Jul 29 2026 Playtron <dev@playtron.one> - 0.1.0-1

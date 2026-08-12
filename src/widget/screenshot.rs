@@ -12,7 +12,7 @@ use cosmic::iced::core::{
 };
 use cosmic::iced::{self, window};
 use cosmic::widget::{
-    self, button, divider, dropdown, icon, image, layer_container, row, space, svg, text,
+    self, button, divider, dropdown, image, layer_container, row, space, svg, text,
 };
 use cosmic_bg_config::Source;
 use wayland_client::protocol::wl_output::WlOutput;
@@ -20,6 +20,7 @@ use wayland_client::protocol::wl_output::WlOutput;
 use crate::app::OutputState;
 use crate::fl;
 use crate::screenshot::{Choice, Rect, ScreenshotImage};
+use crate::widget::lucide::icon as lucide_icon;
 
 use super::output_selection::OutputSelection;
 use super::rectangle_selection::{DragState, RectangleSelection};
@@ -32,6 +33,14 @@ const MENU_DIVIDER_INSET: f32 = 8.0;
 /// Height of the separators between tool-panel control groups. Sized so the
 /// visible line matches the icon-button height rather than shrinking to a dot.
 const MENU_DIVIDER_HEIGHT: f32 = MENU_ICON_SIZE as f32 + 2.0 * MENU_DIVIDER_INSET;
+
+/// Tool-panel glyphs, vendored under `res/icons/lucide` rather than pulled from
+/// the icon theme so the panel draws the same style as the rest of the shell.
+/// The three capture modes stay a coherent trio: the shape of what gets captured.
+const ICON_SELECTION: &[u8] = include_bytes!("../../res/icons/lucide/square-dashed.svg");
+const ICON_WINDOW: &[u8] = include_bytes!("../../res/icons/lucide/app-window.svg");
+const ICON_SCREEN: &[u8] = include_bytes!("../../res/icons/lucide/monitor.svg");
+const ICON_CLOSE: &[u8] = include_bytes!("../../res/icons/lucide/x.svg");
 
 pub struct ScreenshotSelection<'a, Msg> {
     id: cosmic::widget::Id,
@@ -224,18 +233,14 @@ where
                 row![
                     row![
                         button::custom(
-                            icon::Icon::from(
-                                icon::from_name("screenshot-selection-symbolic").size(icon_size)
-                            )
-                            .width(Length::Fixed(icon_size as f32))
-                            .height(Length::Fixed(icon_size as f32))
-                            .class(
-                                if matches!(choice, Choice::Rectangle(..)) {
+                            lucide_icon(ICON_SELECTION, icon_size)
+                                .width(Length::Fixed(icon_size as f32))
+                                .height(Length::Fixed(icon_size as f32))
+                                .class(if matches!(choice, Choice::Rectangle(..)) {
                                     active_icon.clone()
                                 } else {
                                     cosmic::theme::Svg::default()
-                                }
-                            )
+                                })
                         )
                         .selected(matches!(choice, Choice::Rectangle(..)))
                         .class(cosmic::theme::Button::Icon)
@@ -245,34 +250,28 @@ where
                         )))
                         .padding(space_xxs),
                         button::custom(
-                            icon::Icon::from(
-                                icon::from_name("screenshot-window-symbolic").size(icon_size)
-                            )
-                            .class(if matches!(choice, Choice::Window(..)) {
-                                active_icon.clone()
-                            } else {
-                                cosmic::theme::Svg::default()
-                            })
-                            .width(Length::Fixed(icon_size as f32))
-                            .height(Length::Fixed(icon_size as f32))
+                            lucide_icon(ICON_WINDOW, icon_size)
+                                .class(if matches!(choice, Choice::Window(..)) {
+                                    active_icon.clone()
+                                } else {
+                                    cosmic::theme::Svg::default()
+                                })
+                                .width(Length::Fixed(icon_size as f32))
+                                .height(Length::Fixed(icon_size as f32))
                         )
                         .selected(matches!(choice, Choice::Window(..)))
                         .class(cosmic::theme::Button::Icon)
                         .on_press(on_choice_change(Choice::Window(output.name.clone(), None)))
                         .padding(space_xxs),
                         button::custom(
-                            icon::Icon::from(
-                                icon::from_name("screenshot-screen-symbolic").size(icon_size)
-                            )
-                            .width(Length::Fixed(icon_size as f32))
-                            .height(Length::Fixed(icon_size as f32))
-                            .class(
-                                if matches!(choice, Choice::Output(..)) {
+                            lucide_icon(ICON_SCREEN, icon_size)
+                                .width(Length::Fixed(icon_size as f32))
+                                .height(Length::Fixed(icon_size as f32))
+                                .class(if matches!(choice, Choice::Output(..)) {
                                     active_icon.clone()
                                 } else {
                                     cosmic::theme::Svg::default()
-                                }
-                            )
+                                })
                         )
                         .selected(matches!(choice, Choice::Output(..)))
                         .class(cosmic::theme::Button::Icon)
@@ -299,7 +298,7 @@ where
                     .map(dropdown_selected),
                     divider::vertical::light().height(Length::Fixed(MENU_DIVIDER_HEIGHT)),
                     button::custom(
-                        icon::Icon::from(icon::from_name("window-close-symbolic").size(icon_size))
+                        lucide_icon(ICON_CLOSE, icon_size)
                             .width(Length::Fixed(icon_size as f32))
                             .height(Length::Fixed(icon_size as f32))
                     )
