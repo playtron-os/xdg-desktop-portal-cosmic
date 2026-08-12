@@ -21,8 +21,8 @@ vars:
   # The portal is a D-Bus activated backend, so it installs to libexec rather
   # than bin. Both service files bake this path in via the @libexecdir@ token.
   LIBEXECDIR: /usr/libexec
-  # `wgpu` is not a default feature, but the dimmed backdrop behind the
-  # screenshot selection is gated on it - ship it enabled.
+  # `wgpu` is not a default feature; ship it enabled so the portal renders on
+  # the GPU rather than falling back to the tiny-skia software renderer.
   FEATURES: wgpu
 
 tasks:

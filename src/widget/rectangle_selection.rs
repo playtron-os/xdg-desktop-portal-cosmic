@@ -497,60 +497,49 @@ impl<Msg: 'static + Clone> Widget<Msg, cosmic::Theme, cosmic::Renderer>
         if inner_rect.intersection(&outer_rect).is_none() {
             return;
         }
-        #[cfg(feature = "wgpu")]
-        {
-            use cosmic::iced::advanced::graphics::Mesh;
-            use cosmic::iced::advanced::graphics::color::pack;
-            use cosmic::iced::advanced::graphics::mesh::{Indexed, Renderer, SolidVertex2D};
-            use cosmic::iced::core::Transformation;
-            let mut overlay = Color::BLACK;
-            overlay.a = 0.3;
-
-            let outer_bottom_right = (outer_size.width, outer_size.height);
-            let inner_top_left = (inner_rect.x, inner_rect.y);
-            let outer_top_left = (outer_rect.x, outer_rect.y);
-            let inner_bottom_right = (
-                inner_rect.x + inner_rect.width,
-                inner_rect.y + inner_rect.height,
-            );
-            let vertices = vec![
-                outer_top_left,
-                (outer_bottom_right.0, outer_top_left.1),
-                outer_bottom_right,
-                (outer_top_left.0, outer_bottom_right.1),
-                inner_top_left,
-                (inner_bottom_right.0, inner_top_left.1),
-                inner_bottom_right,
-                (inner_top_left.0, inner_bottom_right.1),
-            ];
-            // build 8 triangles around the selected region
-            #[rustfmt::skip]
-            let indices = vec![
-                5, 2, 1,
-                5, 6, 2,
-                6, 4, 2,
-                6, 8, 4,
-                8, 3, 4,
-                8, 7, 3,
-                7, 1, 3,
-                7, 5, 1,
-            ];
-
-            renderer.draw_mesh(Mesh::Solid {
-                buffers: Indexed {
-                    vertices: vertices
-                        .into_iter()
-                        .map(|v| SolidVertex2D {
-                            position: [v.0, v.1],
-                            color: pack(overlay),
-                        })
-                        .collect(),
-                    indices,
+        // Dim everything outside the selection with four bands around it. Quads
+        // rather than a mesh, so the overlay renders on every backend. The bands
+        // are in widget-local space: the selection is in global compositor
+        // coordinates, so translate it onto this output and clip it there first.
+        let mut overlay = Color::BLACK;
+        overlay.a = 0.3;
+        let mut dim = |bounds: Rectangle| {
+            if bounds.width <= 0.0 || bounds.height <= 0.0 {
+                return;
+            }
+            renderer.fill_quad(
+                Quad {
+                    bounds,
+                    border: Border::default(),
+                    shadow: Shadow::default(),
+                    snap: true,
                 },
-                transformation: Transformation::IDENTITY,
-                clip_bounds: Rectangle::INFINITE,
-            })
-        }
+                overlay,
+            );
+        };
+        let output_bounds = Rectangle::new(Point::ORIGIN, outer_size);
+        let hole = self
+            .translated_inner_rect()
+            .intersection(&output_bounds)
+            .unwrap_or(Rectangle::new(Point::ORIGIN, Size::ZERO));
+        let hole_right = hole.x + hole.width;
+        let hole_bottom = hole.y + hole.height;
+        dim(Rectangle::new(
+            Point::ORIGIN,
+            Size::new(outer_size.width, hole.y),
+        ));
+        dim(Rectangle::new(
+            Point::new(0.0, hole_bottom),
+            Size::new(outer_size.width, outer_size.height - hole_bottom),
+        ));
+        dim(Rectangle::new(
+            Point::new(0.0, hole.y),
+            Size::new(hole.x, hole.height),
+        ));
+        dim(Rectangle::new(
+            Point::new(hole_right, hole.y),
+            Size::new(outer_size.width - hole_right, hole.height),
+        ));
 
         // Dashed outline: `fill_quad` only renders solid borders, so each dash is
         // its own quad. Dashes follow the unclipped selection and the surrounding
