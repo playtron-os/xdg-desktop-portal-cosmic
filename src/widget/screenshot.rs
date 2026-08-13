@@ -166,7 +166,11 @@ where
                 .width(Length::Fill)
                 .height(Length::Fill)
                 .into(),
-            Choice::Window(..) => match output.bg_source.clone() {
+            Choice::Window(..) => match output
+                .bg_source
+                .clone()
+                .or_else(crate::screenshot::default_bg_source)
+            {
                 Some(Source::Path(path)) => image::Image::new(image::Handle::from_path(path))
                     .content_fit(ContentFit::Cover)
                     .width(Length::Fill)
@@ -209,13 +213,12 @@ where
                         })))
                         .into()
                 }
-                None => image::Image::new(image::Handle::from_path(
-                    "/usr/share/backgrounds/cosmic/orion_nebula_nasa_heic0601a.jpg",
-                ))
-                .content_fit(ContentFit::Cover)
-                .width(Length::Fill)
-                .height(Length::Fill)
-                .into(),
+                // No wallpaper recorded and none installed: a themed surface, rather than a
+                // broken image widget pointed at a path that does not exist.
+                None => layer_container(space::horizontal().width(Length::Fill))
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    .into(),
             },
         };
         let active_icon = cosmic::theme::Svg::Custom(Rc::new(|t| svg::Style {
