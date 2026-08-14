@@ -5,21 +5,11 @@
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
-/// Default value of `XDG_DATA_DIRS` from the XDG Base Directory Specification.
-const XDG_DATA_DIRS_DEFAULT: &str = "/usr/local/share:/usr/share";
-
-/// Prefix that the running executable was installed under: `<prefix>/libexec/exe` -> `<prefix>`.
-fn install_prefix() -> Option<PathBuf> {
-    let exe = std::env::current_exe().ok()?;
-    let dir = exe.parent()?;
-    let name = dir.file_name()?;
-
-    if name != OsStr::new("libexec") && name != OsStr::new("bin") {
-        return None;
-    }
-
-    dir.parent().map(Path::to_path_buf)
-}
+// The prefix rule and the XDG spec default come from `icetron-paths`, shared across the
+// fleet. The search *order* stays local: it differs from that crate's, and the tests
+// below pin it.
+use icetron_paths::DATA_DIRS_DEFAULT as XDG_DATA_DIRS_DEFAULT;
+use icetron_paths::install_prefix;
 
 /// XDG data directories, in search order, from an explicitly-supplied environment.
 ///
