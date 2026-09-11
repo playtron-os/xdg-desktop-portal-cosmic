@@ -505,7 +505,13 @@ impl Screenshot {
         //
         // The most straightforward solution is to load the screenshot config here
         let config = config::Config::load().0.screenshot;
-        let workspace = crate::workspace::caller_dirs(connection, &handle).await;
+        // The caller's own workspace when it is in one (an app asking through its
+        // router); otherwise the workspace on screen, since a screenshot
+        // triggered from the machine plane still captures whatever is shown.
+        let workspace = match crate::workspace::caller_dirs(connection, &handle).await {
+            Some(dirs) => Some(dirs),
+            None => crate::workspace::active_dirs(connection).await,
+        };
 
         // TODO create handle, show dialog
         let mut outputs = Vec::new();

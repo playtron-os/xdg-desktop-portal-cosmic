@@ -40,7 +40,28 @@ pub async fn caller_dirs(
     let registry = zbus::Proxy::new(connection, REGISTRY, OBJECT, REGISTRY)
         .await
         .ok()?;
-    registry.call("Dirs", &(workspace,)).await.ok()
+    match registry.call("Dirs", &(workspace.as_str(),)).await {
+        Ok(dirs) => Some(dirs),
+        // A slice the registry does not know: a workspace deleted while its
+        // sandbox still runs. Said, not swallowed, before the fallback to
+        // whatever is on screen.
+        Err(error) => {
+            tracing::warn!(%workspace, %error, "the caller's workspace is not one the registry knows");
+            None
+        }
+    }
+}
+
+/// The directories of the workspace on screen, when a registry answers. The
+/// fallback for a caller that is not itself in a workspace — a screenshot
+/// triggered by a compositor shortcut runs a machine-plane tool, but the
+/// capture is of whatever workspace is on screen, so it belongs to that one.
+pub async fn active_dirs(connection: &zbus::Connection) -> Option<HashMap<String, String>> {
+    let registry = zbus::Proxy::new(connection, REGISTRY, OBJECT, REGISTRY)
+        .await
+        .ok()?;
+    // An empty id means the active workspace.
+    registry.call("Dirs", &("",)).await.ok()
 }
 
 /// The unique name a request handle was made for.
