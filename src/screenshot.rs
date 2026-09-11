@@ -245,23 +245,39 @@ impl Screenshot {
         Ok(buffer)
     }
 
-    pub fn get_img_path(location: ImageSaveLocation) -> Option<PathBuf> {
+    /// Where a capture is saved. The same variables either way: from the
+    /// caller's workspace's directories when a registry named them
+    /// (`workspace`), else from this session's environment.
+    pub fn get_img_path(
+        location: ImageSaveLocation,
+        workspace: Option<&HashMap<String, String>>,
+    ) -> Option<PathBuf> {
+        let var = |name: &str| -> Option<PathBuf> {
+            match workspace {
+                Some(dirs) => dirs.get(name).map(PathBuf::from),
+                None => std::env::var_os(name).map(PathBuf::from),
+            }
+        };
+        let home = || match workspace {
+            Some(dirs) => dirs.get("HOME").map(PathBuf::from),
+            None => dirs::home_dir(),
+        };
         let mut path = match location {
             ImageSaveLocation::Pictures => {
-                // First check for XDG_SCREENSHOTS_DIR environment variable
-                std::env::var_os("XDG_SCREENSHOTS_DIR")
-                    .map(PathBuf::from)
+                // XDG_SCREENSHOTS_DIR first; else the pictures dir, or
+                // ~/Pictures, with Screenshots under it.
+                var("XDG_SCREENSHOTS_DIR")
                     .filter(|p| p.is_absolute())
                     .or_else(|| {
-                        // Fall back to XDG_PICTURES_DIR/Screenshots or ~/Pictures/Screenshots
-                        dirs::picture_dir()
-                            .or_else(|| dirs::home_dir().map(|h| h.join("Pictures")))
+                        var("XDG_PICTURES_DIR")
+                            .or_else(|| workspace.is_none().then(dirs::picture_dir).flatten())
+                            .or_else(|| home().map(|h| h.join("Pictures")))
                             .map(|p| p.join("Screenshots"))
                     })
             }
-            ImageSaveLocation::Documents => {
-                dirs::document_dir().or_else(|| dirs::home_dir().map(|h| h.join("Documents")))
-            }
+            ImageSaveLocation::Documents => var("XDG_DOCUMENTS_DIR")
+                .or_else(|| workspace.is_none().then(dirs::document_dir).flatten())
+                .or_else(|| home().map(|h| h.join("Documents"))),
             ImageSaveLocation::Clipboard => None,
         }?;
 
@@ -279,8 +295,24 @@ impl Screenshot {
         Some(path)
     }
 
-    async fn screenshot_inner(&self, outputs: &[Output], app_id: &str) -> anyhow::Result<PathBuf> {
+    /// A capture of `outputs` as a file for the caller to read. In the
+    /// caller's workspace's cache dir when a registry named one
+    /// (`workspace`): an app in that workspace sees nothing outside it, this
+    /// system's temp dir least of all.
+    async fn screenshot_inner(
+        &self,
+        outputs: &[Output],
+        app_id: &str,
+        workspace: Option<&HashMap<String, String>>,
+    ) -> anyhow::Result<PathBuf> {
         let wayland_helper = self.wayland_helper.clone();
+        let scratch = workspace
+            .and_then(|dirs| {
+                dirs.get("XDG_CACHE_HOME")
+                    .map(PathBuf::from)
+                    .or_else(|| dirs.get("HOME").map(|h| Path::new(h).join(".cache")))
+            })
+            .map(|cache| cache.join("xdg-desktop-portal-cosmic"));
 
         let mut bounds_opt: Option<Rect> = None;
         let mut frames = Vec::with_capacity(outputs.len());
@@ -317,10 +349,15 @@ impl Screenshot {
         let (file, path) = tokio::task::spawn_blocking(move || -> anyhow::Result<_> {
             let image = combined_image(bounds_opt.unwrap_or_default(), frames);
 
-            let mut file = tempfile::Builder::new()
-                .prefix("screenshot-")
-                .suffix(".png")
-                .tempfile()?;
+            let mut builder = tempfile::Builder::new();
+            builder.prefix("screenshot-").suffix(".png");
+            let mut file = match &scratch {
+                Some(dir) => {
+                    std::fs::create_dir_all(dir)?;
+                    builder.tempfile_in(dir)?
+                }
+                None => builder.tempfile()?,
+            };
             {
                 write_png(&mut file, &image)?;
             }
@@ -437,6 +474,9 @@ pub struct Args {
     pub tx: Sender<PortalResponse<ScreenshotResult>>,
     pub choice: Choice,
     pub location: ImageSaveLocation,
+    /// The caller's workspace's directories by variable name, when a registry
+    /// named them.
+    pub workspace: Option<HashMap<String, String>>,
     pub action: Action,
 }
 
@@ -465,6 +505,7 @@ impl Screenshot {
         //
         // The most straightforward solution is to load the screenshot config here
         let config = config::Config::load().0.screenshot;
+        let workspace = crate::workspace::caller_dirs(connection, &handle).await;
 
         // TODO create handle, show dialog
         let mut outputs = Vec::new();
@@ -548,6 +589,7 @@ impl Screenshot {
                     toplevel_images,
                     tx,
                     location: config.save_location,
+                    workspace: workspace.clone(),
                     // TODO cover all outputs at start of rectangle?
                     choice,
                     // will be updated
@@ -564,7 +606,10 @@ impl Screenshot {
             }
         }
 
-        let doc_path = match self.screenshot_inner(&outputs, app_id).await {
+        let doc_path = match self
+            .screenshot_inner(&outputs, app_id, workspace.as_ref())
+            .await
+        {
             Ok(res) => res,
             Err(err) => {
                 tracing::error!("Failed to capture screenshot: {}", err);
@@ -574,7 +619,7 @@ impl Screenshot {
 
         // connection.object_server().remove::<Request, _>(&handle);
         PortalResponse::Success(ScreenshotResult {
-            uri: format!("file:///{}", doc_path.display()),
+            uri: format!("file://{}", doc_path.display()),
         })
     }
 
@@ -678,11 +723,12 @@ pub fn update_msg(
                 choice,
                 output_images: mut images,
                 location,
+                workspace,
                 ..
             } = args;
 
             let mut success = true;
-            let image_path = Screenshot::get_img_path(location);
+            let image_path = Screenshot::get_img_path(location, workspace.as_ref());
 
             match choice {
                 Choice::Output(name) => {
@@ -762,7 +808,7 @@ pub fn update_msg(
 
             let response = if success && let Some(image_path) = image_path {
                 PortalResponse::Success(ScreenshotResult {
-                    uri: format!("file:///{}", image_path.display()),
+                    uri: format!("file://{}", image_path.display()),
                 })
             } else if success && image_path.is_none() {
                 PortalResponse::Success(ScreenshotResult {
@@ -909,6 +955,7 @@ pub fn update_args(
         action,
         location,
         toplevel_images,
+        workspace: _,
     } = &args;
 
     if portal.outputs.len() != images.len() {
@@ -990,5 +1037,86 @@ pub fn update_args(
     } else {
         tracing::info!("Existing screenshot args updated");
         cosmic::Task::none()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_capture_lands_where_the_callers_workspace_apps_look() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("Workspaces/meridian");
+        let at = |p: &str| root.join(p).display().to_string();
+        // What the registry names: the same variables the workspace's apps
+        // are told, as machine paths.
+        let dirs: HashMap<String, String> = [
+            ("HOME".to_string(), root.display().to_string()),
+            (
+                "XDG_SCREENSHOTS_DIR".to_string(),
+                at("Captures/Screenshots"),
+            ),
+            ("XDG_PICTURES_DIR".to_string(), at("Captures/Pictures")),
+            ("XDG_DOCUMENTS_DIR".to_string(), at("Documents")),
+        ]
+        .into_iter()
+        .collect();
+        let pictures = Screenshot::get_img_path(ImageSaveLocation::Pictures, Some(&dirs)).unwrap();
+        assert!(
+            pictures.starts_with(root.join("Captures/Screenshots")),
+            "{pictures:?}"
+        );
+        assert!(
+            root.join("Captures/Screenshots").is_dir(),
+            "made on the way"
+        );
+        assert!(
+            pictures
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .starts_with("Screenshot_")
+        );
+        let documents =
+            Screenshot::get_img_path(ImageSaveLocation::Documents, Some(&dirs)).unwrap();
+        assert!(
+            documents.starts_with(root.join("Documents")),
+            "{documents:?}"
+        );
+        assert_eq!(
+            Screenshot::get_img_path(ImageSaveLocation::Clipboard, Some(&dirs)),
+            None
+        );
+        // Without XDG_SCREENSHOTS_DIR, Screenshots under the pictures dir.
+        let mut fewer = dirs.clone();
+        fewer.remove("XDG_SCREENSHOTS_DIR");
+        let pictures = Screenshot::get_img_path(ImageSaveLocation::Pictures, Some(&fewer)).unwrap();
+        assert!(
+            pictures.starts_with(root.join("Captures/Pictures/Screenshots")),
+            "{pictures:?}"
+        );
+        // With only a home, the classic ~/Pictures/Screenshots under it.
+        let home_only: HashMap<String, String> = [("HOME".to_string(), root.display().to_string())]
+            .into_iter()
+            .collect();
+        let pictures =
+            Screenshot::get_img_path(ImageSaveLocation::Pictures, Some(&home_only)).unwrap();
+        assert!(
+            pictures.starts_with(root.join("Pictures/Screenshots")),
+            "{pictures:?}"
+        );
+    }
+
+    #[test]
+    fn without_a_workspace_the_sessions_own_folders_are_used() {
+        let tmp = tempfile::tempdir().unwrap();
+        let shots = tmp.path().join("shots");
+        // SAFETY: tests in this module run single-threaded over this variable.
+        unsafe { std::env::set_var("XDG_SCREENSHOTS_DIR", &shots) };
+        let path = Screenshot::get_img_path(ImageSaveLocation::Pictures, None).unwrap();
+        unsafe { std::env::remove_var("XDG_SCREENSHOTS_DIR") };
+        assert!(path.starts_with(&shots), "{path:?}");
     }
 }

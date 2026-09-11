@@ -24,6 +24,7 @@ mod screenshot;
 mod subscription;
 mod wayland;
 mod widget;
+mod workspace;
 
 static DBUS_NAME: &str = "org.freedesktop.impl.portal.desktop.cosmic";
 static DBUS_PATH: &str = "/org/freedesktop/portal/desktop";
