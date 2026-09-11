@@ -1,3 +1,12 @@
+## [1.1.1](https://github.com/playtron-os/xdg-desktop-portal-cosmic/compare/v1.1.0...v1.1.1) (2026-09-11)
+
+
+### Bug Fixes
+
+* a capture from the machine plane goes to the workspace on screen ([42aba25](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/42aba25184773fda1e50ac76b4cfa1c183b4da21))
+* resolve the default screenshot wallpaper through XDG_DATA_DIRS ([c81ad7a](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/c81ad7ad837ffd42221cce9c74d29433c1f57610))
+* save captures where the requesting workspace's apps can find them ([07d30c0](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/07d30c0ac17984df3fab1a6a5b91dde0e2fe64aa))
+
 # [1.1.0](https://github.com/playtron-os/xdg-desktop-portal-cosmic/compare/v1.0.0...v1.1.0) (2026-08-12)
 
 
