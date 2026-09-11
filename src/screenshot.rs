@@ -33,6 +33,19 @@ use crate::widget::keyboard_wrapper::KeyboardWrapper;
 use crate::widget::rectangle_selection::DragState;
 use crate::{PortalResponse, fl, subscription};
 
+/// Wallpaper shown behind the screenshot picker when cosmic-bg records none for an output,
+/// relative to an XDG data directory.
+const DEFAULT_BG_FILE: &str = "backgrounds/cosmic/orion_nebula_nasa_heic0601a.jpg";
+
+/// Background source to fall back on when cosmic-bg has no wallpaper for an output.
+///
+/// The default wallpaper is searched for in the XDG data directories rather than assumed to
+/// be at `/usr/share`, and is `None` when it is not installed at all, so the picker never
+/// gets handed a path that cannot be opened.
+pub fn default_bg_source() -> Option<cosmic_bg_config::Source> {
+    crate::data_dirs::find_data_file(DEFAULT_BG_FILE).map(cosmic_bg_config::Source::Path)
+}
+
 #[derive(Clone, Debug)]
 pub struct ScreenshotImage {
     pub rgba: RgbaImage,
@@ -923,18 +936,12 @@ pub fn update_args(
         };
         for o in &mut portal.outputs {
             let source = bg_state.wallpapers.iter().find(|s| s.0 == o.name);
-            o.bg_source = Some(source.cloned().map(|s| s.1).unwrap_or_else(|| {
-                cosmic_bg_config::Source::Path(
-                    "/usr/share/backgrounds/cosmic/orion_nebula_nasa_heic0601a.jpg".into(),
-                )
-            }));
+            o.bg_source = source.cloned().map(|s| s.1).or_else(default_bg_source);
         }
     } else {
         tracing::error!("Failed to get bg config state");
         for o in &mut portal.outputs {
-            o.bg_source = Some(cosmic_bg_config::Source::Path(
-                "/usr/share/backgrounds/cosmic/orion_nebula_nasa_heic0601a.jpg".into(),
-            ));
+            o.bg_source = default_bg_source();
         }
     }
     portal.location_options = vec![

@@ -13,6 +13,7 @@ systemd = ["dep:tracing-journald"]
 members = ["cosmic-portal-config"]
 
 [dependencies]
+icetron-paths = { git = "https://github.com/playtron-os/icetron-paths.git", rev = "2c8bf4051a24ae61afa4ed9729e841a8fee709ad" }
 anyhow = "1.0.102"
 ashpd = "0.12"
 cosmic-files = { git = "https://github.com/pop-os/cosmic-files", default-features = false, features = [
