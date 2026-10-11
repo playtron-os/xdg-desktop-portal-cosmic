@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/playtron-os/xdg-desktop-portal-cosmic/compare/v1.1.1...v1.1.2) (2026-10-11)
+
+
+### Bug Fixes
+
+* **settings:** send accent-color changes as (ddd) ([6d24a26](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/6d24a2626dc2ad86988b83a2eddd2ea2a75381e2))
+
 ## [1.1.1](https://github.com/playtron-os/xdg-desktop-portal-cosmic/compare/v1.1.0...v1.1.1) (2026-09-11)
 
 
