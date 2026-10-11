@@ -1,3 +1,10 @@
+## [1.1.3](https://github.com/playtron-os/xdg-desktop-portal-cosmic/compare/v1.1.2...v1.1.3) (2026-10-11)
+
+
+### Bug Fixes
+
+* screenshot to clipboard sometimes fails ([0ba8f59](https://github.com/playtron-os/xdg-desktop-portal-cosmic/commit/0ba8f59d90c47001ff8410db52bee77dff407845))
+
 ## [1.1.2](https://github.com/playtron-os/xdg-desktop-portal-cosmic/compare/v1.1.1...v1.1.2) (2026-10-11)
 
 
