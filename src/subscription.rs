@@ -152,11 +152,7 @@ pub(crate) async fn process_changes(
                                 iface_ref.signal_emitter(),
                                 APPEARANCE_NAMESPACE,
                                 ACCENT_COLOR_KEY,
-                                zvariant::Array::from(
-                                    [iface.accent.red, iface.accent.green, iface.accent.blue]
-                                        .as_slice(),
-                                )
-                                .into(),
+                                iface.accent_color().into(),
                             )
                             .await?;
                     }

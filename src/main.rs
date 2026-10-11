@@ -217,6 +217,15 @@ struct Settings {
 }
 
 impl Settings {
+    /// The accent as the portal spec types it, `(ddd)`, for reads and changes alike.
+    fn accent_color(&self) -> Color {
+        Color {
+            red: self.accent.red,
+            green: self.accent.green,
+            blue: self.accent.blue,
+        }
+    }
+
     pub fn new() -> Self {
         let theme = cosmic::theme::system_preference();
         let cosmic = theme.cosmic();
@@ -271,11 +280,7 @@ impl Settings {
                         CONTRAST_KEY.to_string(),
                         OwnedValue::from(self.contrast as u32),
                     );
-                    if let Ok(value) = OwnedValue::try_from(Color {
-                        red: self.accent.red,
-                        green: self.accent.green,
-                        blue: self.accent.blue,
-                    }) {
+                    if let Ok(value) = OwnedValue::try_from(self.accent_color()) {
                         inner.insert(ACCENT_COLOR_KEY.to_string(), value);
                     }
                     map.insert(APPEARANCE_NAMESPACE.to_string(), inner);
@@ -301,12 +306,8 @@ impl Settings {
                 Ok(OwnedValue::from(self.color_scheme as u32))
             }
             (APPEARANCE_NAMESPACE, CONTRAST_KEY) => Ok(OwnedValue::from(self.contrast as u32)),
-            (APPEARANCE_NAMESPACE, ACCENT_COLOR_KEY) => OwnedValue::try_from(Color {
-                red: self.accent.red,
-                green: self.accent.green,
-                blue: self.accent.blue,
-            })
-            .map_err(|e| zbus::fdo::Error::Failed(e.to_string())),
+            (APPEARANCE_NAMESPACE, ACCENT_COLOR_KEY) => OwnedValue::try_from(self.accent_color())
+                .map_err(|e| zbus::fdo::Error::Failed(e.to_string())),
             (GNOME_DESKTOP_INTERFACE_NAMESPACE, TEXT_SCALING_FACTOR_KEY) => {
                 Ok(OwnedValue::from(1.0_f64))
             }
