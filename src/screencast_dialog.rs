@@ -44,6 +44,11 @@ const SELECTED_ICON: &[u8] = include_bytes!("../res/icons/lucide/check.svg");
 /// Size of both glyphs in a toplevel row.
 const TOPLEVEL_ICON_SIZE: u16 = 24;
 
+/// The dialog's hero slot for the app that asked, as in the Access dialog: the
+/// app's own icon fills it, the Lucide fallback draws at its native size.
+const REQUESTER_ICON_SLOT: u16 = 64;
+const LUCIDE_ICON_SIZE: u16 = 24;
+
 pub async fn hide_screencast_prompt(
     subscription_tx: &mpsc::Sender<crate::subscription::Event>,
     session_handle: &zvariant::ObjectPath<'_>,
@@ -95,8 +100,7 @@ pub async fn show_screencast_prompt(
     // Order outputs by their position in the display arrangement
     outputs.sort_by_key(|(_, info, _)| info.logical_position.unwrap_or((i32::MAX, i32::MAX)));
 
-    let app_name = get_desktop_entry(&desktop_entries, &app_id)
-        .and_then(|x| Some(x.name(&locales)?.into_owned()));
+    let requester = Requester::of(&desktop_entries, &app_id, &locales);
 
     let (tx, mut rx) = mpsc::channel(1);
     let args = Args {
@@ -105,7 +109,7 @@ pub async fn show_screencast_prompt(
         toplevels,
         multiple,
         source_types,
-        app_name,
+        requester,
         tx,
         capture_sources: Default::default(),
     };
@@ -130,6 +134,61 @@ async fn load_desktop_entries(locales: &[String]) -> Vec<DesktopEntry> {
 
 fn get_desktop_entry<'a>(entries: &'a [DesktopEntry], id: &str) -> Option<&'a DesktopEntry> {
     fde::find_app_by_id(entries, Ascii::new(id))
+}
+
+/// The app the portal frontend says is asking, as its desktop entry names it.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+struct Requester {
+    name: Option<String>,
+    icon: Option<String>,
+}
+
+impl Requester {
+    /// The frontend accepts an app id only when `<id>.desktop` exists, so that
+    /// entry is the app. `find_app_by_id` alone also matches an id's last
+    /// dot-part, or an entry's `StartupWMClass` or `Name`, and could name the
+    /// caller after another app; it stays the fallback for ids with no entry
+    /// of their own. An empty id is no app.
+    fn of(entries: &[DesktopEntry], app_id: &str, locales: &[String]) -> Self {
+        if app_id.is_empty() {
+            return Self::default();
+        }
+        let entry = entries
+            .iter()
+            .find(|entry| Ascii::new(entry.id()) == Ascii::new(app_id))
+            .or_else(|| get_desktop_entry(entries, app_id));
+        let Some(entry) = entry else {
+            return Self::default();
+        };
+        Self {
+            name: entry.name(locales).map(|name| name.into_owned()),
+            icon: entry
+                .icon()
+                .filter(|icon| !icon.is_empty())
+                .map(str::to_string),
+        }
+    }
+}
+
+/// The asking app's own icon, theme-resolved, or the Lucide fallback when it
+/// names none or one the theme does not ship.
+fn requester_icon(name: Option<&str>) -> cosmic::Element<'_, Msg> {
+    let named = match name.map(IconSource::from_unknown) {
+        Some(IconSource::Path(path)) => Some(icon::from_path(path)),
+        Some(IconSource::Name(name)) => {
+            let named = icon::from_name(name.as_str())
+                .prefer_svg(true)
+                .size(REQUESTER_ICON_SLOT);
+            named.clone().path().map(|_| named.handle())
+        }
+        None => None,
+    };
+    match named {
+        Some(handle) => icon::icon(handle).size(REQUESTER_ICON_SLOT).into(),
+        None => widget::container(lucide::icon(UNKNOWN_APP_ICON, LUCIDE_ICON_SIZE))
+            .center(iced::Length::Fixed(f32::from(REQUESTER_ICON_SLOT)))
+            .into(),
+    }
 }
 
 fn create_dialog() -> cosmic::Task<cosmic::Action<crate::app::Msg>> {
@@ -162,7 +221,7 @@ pub struct Args {
     source_types: BitFlags<SourceType>,
     outputs: Vec<(WlOutput, OutputInfo, Option<widget::image::Handle>)>,
     toplevels: Vec<(ToplevelInfo, Option<String>)>,
-    app_name: Option<String>,
+    requester: Requester,
     // Should be oneshot, but need `Clone` bound
     tx: mpsc::Sender<Option<CaptureSources>>,
     capture_sources: CaptureSources,
@@ -473,11 +532,14 @@ pub(crate) fn view(portal: &CosmicPortal) -> cosmic::Element<'_, Msg> {
             let bbox_h = (max_y - min_y).max(1) as f32;
 
             // Scale the arrangement to fit a target area, and inset each region so
-            // adjacent screens have a gap.
-            const TARGET_W: f32 = 520.0;
+            // adjacent screens have a gap. The width is the dialog's beside the
+            // asking app's icon and the dialog's gap after it.
+            const DIALOG_W: f32 = 520.0;
             const TARGET_H: f32 = 320.0;
             const GAP: f32 = 6.0;
-            let scale = (TARGET_W / bbox_w).min(TARGET_H / bbox_h);
+            let space_s = portal.core.system_theme().cosmic().spacing.space_s;
+            let target_w = DIALOG_W - f32::from(REQUESTER_ICON_SLOT) - f32::from(space_s);
+            let scale = (target_w / bbox_w).min(TARGET_H / bbox_h);
 
             let mut children = Vec::new();
             let mut regions = Vec::new();
@@ -537,7 +599,7 @@ pub(crate) fn view(portal: &CosmicPortal) -> cosmic::Element<'_, Msg> {
     };
 
     let unknown = fl!("unknown-application");
-    let app_name = args.app_name.as_deref().unwrap_or(&unknown);
+    let app_name = args.requester.name.as_deref().unwrap_or(&unknown);
 
     let control = widget::column::with_children(vec![tabs.into(), list]).spacing(8);
     autosize::autosize(
@@ -546,6 +608,7 @@ pub(crate) fn view(portal: &CosmicPortal) -> cosmic::Element<'_, Msg> {
                 .title(fl!("share-screen"))
                 // TODO adjust text for multiple select, types?
                 .body(fl!("share-screen", "description", app_name = app_name))
+                .icon(requester_icon(args.requester.icon.as_deref()))
                 .secondary_action(cancel_button)
                 .primary_action(share_button)
                 .control(control),
@@ -562,4 +625,84 @@ pub(crate) fn view(portal: &CosmicPortal) -> cosmic::Element<'_, Msg> {
     .min_width(1.)
     .min_height(1.)
     .into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn entry(path: &str, data: &str) -> DesktopEntry {
+        DesktopEntry::from_str(path, data, None::<&[&str]>).unwrap()
+    }
+
+    /// The machine's Firefox, listed first as a user's own entries are.
+    fn machine_firefox() -> DesktopEntry {
+        entry(
+            "/home/u/.local/share/applications/firefox.desktop",
+            "[Desktop Entry]\nType=Application\nName=Firefox\nIcon=firefox\nExec=firefox\n",
+        )
+    }
+
+    /// What kora-workspaces writes for an app it registers with the portal.
+    fn registered(id: &str, name: &str, icon: &str) -> DesktopEntry {
+        entry(
+            &format!("/home/u/.local/share/applications/{id}.desktop"),
+            &format!(
+                "[Desktop Entry]\nType=Application\nName={name}\nNoDisplay=true\nIcon={icon}\n"
+            ),
+        )
+    }
+
+    #[test]
+    fn the_picker_names_and_shows_the_app_the_portal_registered() {
+        let id = "one.playtron.Workspace.work.firefox";
+        let entries = [
+            machine_firefox(),
+            registered(id, "Firefox in Work", "firefox"),
+        ];
+        assert_eq!(
+            Requester::of(&entries, id, &[]),
+            Requester {
+                name: Some("Firefox in Work".into()),
+                icon: Some("firefox".into()),
+            }
+        );
+    }
+
+    /// An id's last dot-part names another app's entry: the id's own entry
+    /// wins wherever it is listed.
+    #[test]
+    fn an_app_is_never_named_after_another_by_its_ids_last_part() {
+        let id = "one.playtron.Workspace.work.com.example.firefox";
+        let entries = [
+            machine_firefox(),
+            registered(id, "Example in Work", "example"),
+        ];
+        let requester = Requester::of(&entries, id, &[]);
+        assert_eq!(requester.name.as_deref(), Some("Example in Work"));
+        assert_eq!(requester.icon.as_deref(), Some("example"));
+    }
+
+    /// The frontend could not tell who is asking: no entry may answer for it,
+    /// not even one whose empty `StartupWMClass` equals the empty id.
+    #[test]
+    fn no_app_id_names_no_app() {
+        let entries = [entry(
+            "/usr/share/applications/blank.desktop",
+            "[Desktop Entry]\nType=Application\nName=Blank\nStartupWMClass=\nIcon=blank\n",
+        )];
+        assert_eq!(Requester::of(&entries, "", &[]), Requester::default());
+    }
+
+    /// A machine app whose id has no entry of its own keeps the loose match.
+    #[test]
+    fn a_machine_app_without_its_own_entry_is_found_by_its_last_part() {
+        let entries = [machine_firefox()];
+        assert_eq!(
+            Requester::of(&entries, "org.mozilla.firefox", &[])
+                .name
+                .as_deref(),
+            Some("Firefox")
+        );
+    }
 }
