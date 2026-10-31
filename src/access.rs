@@ -147,10 +147,7 @@ impl AccessDialogArgs {
     pub(crate) fn get_surface(&mut self) -> cosmic::Task<cosmic::Action<crate::app::Msg>> {
         if self.options.modal.unwrap_or_default() {
             // create a modal surface
-            let (id, task) = window::open(window::Settings {
-                resizable: false,
-                ..Default::default()
-            });
+            let (id, task) = window::open(modal_window_settings());
             self.access_id = id;
             task.discard()
         } else {
@@ -188,6 +185,23 @@ impl AccessDialogArgs {
     }
 }
 
+/// The dialog draws its own rounded card, so its window asks for no server-side
+/// frame, which would put the compositor's window header above it.
+fn modal_window_settings() -> window::Settings {
+    window::Settings {
+        resizable: false,
+        decorations: false,
+        transparent: true,
+        ..Default::default()
+    }
+}
+
+/// Tints the icon only when the file found is symbolic. libcosmic tints whatever
+/// a `-symbolic` name resolves to, turning a colour fallback into a solid block.
+fn hero_icon(named: icon::Named) -> Option<icon::Handle> {
+    named.size(HERO_ICON_SLOT).path().map(icon::from_path)
+}
+
 pub(crate) fn view(portal: &CosmicPortal) -> cosmic::Element<'_, Msg> {
     let spacing = portal.core.system_theme().cosmic().spacing;
     let Some(args) = portal.access_args.as_ref() else {
@@ -212,21 +226,20 @@ pub(crate) fn view(portal: &CosmicPortal) -> cosmic::Element<'_, Msg> {
         .spacing(spacing.space_xxs as f32) // space_l
         .align_x(Alignment::Center);
 
-    // The requesting app's own icon name stays theme-resolved; only the fallback
-    // is ours to draw, and it says "unidentified app" rather than the
-    // broken-image placeholder `image-missing` implies. `from_name` renders a
-    // silent blank when the theme ships no such icon, so resolve `path()` first
-    // and fall through to the vendored glyph on a miss.
+    // The requested icon stays theme-resolved; only the fallback is ours to
+    // draw, and it says "unidentified app" rather than the broken-image
+    // placeholder `image-missing` implies. `from_name` renders a silent blank
+    // when the theme ships no such icon, so resolve the path first and fall
+    // through to the vendored glyph on a miss.
     let named = args
         .options
         .icon
         .as_deref()
         .filter(|name| !name.is_empty())
-        .map(|name| icon::from_name(name).size(HERO_ICON_SLOT))
-        .filter(|named| named.clone().path().is_some());
+        .and_then(|name| hero_icon(icon::from_name(name)));
 
     let icon: cosmic::Element<'_, Msg> = match named {
-        Some(named) => icon::Icon::from(named).into(),
+        Some(handle) => icon::icon(handle).size(HERO_ICON_SLOT).into(),
         None => widget::container(lucide::icon(UNKNOWN_APP_ICON, LUCIDE_ICON_SIZE))
             .center(Length::Fixed(f32::from(HERO_ICON_SLOT)))
             .into(),
@@ -339,4 +352,50 @@ pub fn update_args(
     cmds.push(msg.get_surface());
     portal.access_args = Some(msg);
     cosmic::iced::Task::batch(cmds)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{hero_icon, modal_window_settings};
+    use cosmic::widget::icon;
+
+    const SVG: &str = r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="56" height="44" fill="teal"/></svg>"#;
+
+    fn lookup(file: &str, name: &str) -> Option<icon::Handle> {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join(file), SVG).unwrap();
+        hero_icon(icon::from_name(name).with_extra_paths(vec![dir.path().to_path_buf()]))
+    }
+
+    /// The screenshot portal asks for `applets-screenshooter-symbolic`, and
+    /// Kora's theme chain only has Pop's colour `applets-screenshooter`.
+    #[test]
+    fn colour_fallback_for_a_symbolic_name_keeps_its_colours() {
+        let handle = lookup(
+            "xdpc-test-screenshooter.svg",
+            "xdpc-test-screenshooter-symbolic",
+        )
+        .expect("falls back to the colour icon");
+        assert!(!handle.symbolic);
+    }
+
+    #[test]
+    fn symbolic_icon_is_tinted() {
+        let handle = lookup("xdpc-test-camera-symbolic.svg", "xdpc-test-camera-symbolic")
+            .expect("finds the symbolic icon");
+        assert!(handle.symbolic);
+    }
+
+    #[test]
+    fn missing_icon_resolves_to_nothing() {
+        assert!(lookup("xdpc-test-other.svg", "xdpc-test-absent-symbolic").is_none());
+    }
+
+    /// A server-side frame puts the compositor's window header above the card.
+    #[test]
+    fn modal_dialog_asks_for_no_server_side_frame() {
+        let settings = modal_window_settings();
+        assert!(!settings.decorations);
+        assert!(!settings.resizable);
+    }
 }
